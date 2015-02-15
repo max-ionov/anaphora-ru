@@ -1,0 +1,5 @@
+FREELINGDIR=/usr/local/share/freeling/
+LANG=ru
+MODULE=True
+CONJUNCTIONS=True
+PRONOUNS=pronouns.txt
