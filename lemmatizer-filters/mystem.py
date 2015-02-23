@@ -2,6 +2,8 @@
 # -!- coding: utf-8 -!-
 # usage: freeling.py
 
+from __future__ import unicode_literals
+
 import os, sys
 import re
 import pymystem3
@@ -24,14 +26,20 @@ pos_filters = {
     'quant': lambda x: x.tag['pos'] == 'NUM',
 }
 
-def same_grammemmes(features, words):
-    for feature in features:
+gram_values = {
+    'number': frozenset(['ед', 'мн']),
+    'gender': frozenset(['муж', 'сред', 'жен']),
+    'case': frozenset(['им', 'род', 'дат', 'вин', 'твор', 'пр', 'парт', 'местн', 'зват'])
+}
+
+def same_grammemmes(name, words):
+    if name not in gram_values:
+        return True
+
+    for feature in gram_values[name]:
         if all(feature in item.tag['gr'] for item in words):
             return True
     return False
-
-gr_numbers = frozenset([u'ед', u'мн'])
-gr_cases = frozenset([u'им', u'род', u'дат', u'вин', u'твор', u'пр', u'парт', u'местн', u'зват'])
 
 
 """
@@ -40,17 +48,17 @@ This is the list of groups which we are trying to extract. To disable any of the
 agreement_filters = {
     'adjNoun': lambda adj, noun: {'pos': 'NP', 'gr': noun.tag['gr']} if (
         pos_filters['adj'](adj) and pos_filters['noun'](noun) and
-        same_grammemmes(gr_numbers, (adj, noun)))
+        same_grammemmes('number', (adj, noun)))
     else None,
 
     'quantNoun': lambda quant, noun: {'pos': 'NP', 'gr': noun.tag['gr']} if (
         pos_filters['quant'](quant) and pos_filters['noun'](noun) and
-        same_grammemmes(gr_numbers, (quant, noun)))
+        same_grammemmes('number', (quant, noun)))
     else None,
 
     'name': lambda name, surname: {'pos': 'NP', 'gr': name.tag['gr']} if (
         pos_filters['firstName'](name) and (pos_filters['secondName'](surname) or pos_filters['middleName'](surname)) and
-        same_grammemmes(gr_numbers, (name, surname)) and same_grammemmes(gr_cases, (name, surname)))
+        same_grammemmes('number', (name, surname)) and same_grammemmes('case', (name, surname)))
     else None
 }
 
@@ -62,8 +70,8 @@ def load():
     parser = pymystem3.Mystem()
     return lambda text: parser.analyze(text)
 
-tokens_to_skip = [u'', u' ', u'\n', u'\r', u'\t', u'«', u'»', u'"']
-rx_grammemmes_splitter = re.compile(u'[^А-ЯЁа-яёA-Za-z]', re.UNICODE)
+tokens_to_skip = ['', ' ', '\n', '\r', '\t', '«', '»', '"']
+rx_grammemmes_splitter = re.compile('[^А-ЯЁа-яёA-Za-z]', re.UNICODE)
 
 def tag_text(text, analyzer):
     ret = []
@@ -74,7 +82,7 @@ def tag_text(text, analyzer):
         if word['text'].strip(' ') in tokens_to_skip:
             continue
         word_info = word['analysis'][0] if 'analysis' in word and len(word['analysis']) > 0 else None
-        new_word = type('Word', (object,),
+        new_word = type(b'Word', (object,),
                         {'wordform': word['text'],
                          'lemma': word_info['lex'] if word_info else word['text'],
                          'tag': word_info['gr'] if word_info else 'PUNCT',
